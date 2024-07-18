@@ -3,7 +3,7 @@ const context = canvas.getContext('2d');
 const grid = 64;
 const numRows = 13;
 const numCols = 15;
-const numSoftWalls = 50;
+const numSoftWalls = 60;
 
 // SodtWall characteristics
 const softWallCanvas = document.createElement('canvas');
@@ -327,6 +327,11 @@ const player = {
     context.beginPath();
     context.arc(x, y, this.radius, 0, 2 * Math.PI);
     context.fill();
+  },
+  clear() {
+    const x = this.col * grid;
+    const y = this.row * grid;
+    context.clearRect(x, y, grid, grid);
   }
 }
 
@@ -336,12 +341,12 @@ let dt;
 let dateTimePK;
 let pk = false;
 function loop(timestamp) {
-  // end the game if the player is dead
+  // End the game if the player is dead
   if (!player.alive) {
     dateTimePK = pk ? dateTimePK : timestamp;
     pk = true;
-    if (timestamp - dateTimePK > 3000) {
-      console.log(player.bombKiller);
+    if (timestamp - dateTimePK > 350) {
+      player.clear();
       console.log('Game Over');
       return;
     }
