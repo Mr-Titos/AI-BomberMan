@@ -1,42 +1,45 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Bomberman</title>
-  <meta charset="UTF-8">
-  <style>
-  html, body {
-    height: 100%;
-    margin: 0;
-  }
+  <head>
+    <!-- Load TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
 
-  body {
-    background: black;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative; /* Add this line */
-  }
+    <title>Bomberman</title>
+    <meta charset="UTF-8" />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
 
-  canvas {
-    background: rgb(61, 61, 61);
-    margin-bottom: 10px;
-  }
+      body {
+        background: black;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
 
-  #score {
-    color: white;
-    align-items: flex-start; /* Update this line */
-    font-size: 24px;
-    position: absolute; /* Add this line */
-    top: 0; /* Add this line */
-    left: 10; /* Add this line */
-  }
-  </style>
-</head>
-<body>
-<div id="score">Score : 0</div>
-<canvas width="960" height="832" id="game"></canvas>
-<script src="script.js"></script>
-</body>
+      canvas {
+        background: rgb(61, 61, 61);
+        margin-bottom: 10px;
+      }
 
+      #score {
+        color: white;
+        align-items: flex-start;
+        font-size: 24px;
+        position: absolute;
+        top: 0;
+        left: 10;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="score">Score : 0</div>
+    <canvas width="960" height="832" id="game"></canvas>
+    <script type="module" src="script.js"></script>
+  </body>
 </html>

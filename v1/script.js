@@ -1,3 +1,5 @@
+import { getState, remember, selectAction, trainModel } from './training.js';
+
 const canvas = document.getElementById('game');
 const context = canvas.getContext('2d');
 const grid = 64;
@@ -54,13 +56,12 @@ outlineCtx.fillRect(0, 0, grid - 2, grid - 2);
 outlineCtx.fillStyle = '#991203';
 outlineCtx.fillRect(2, 2, grid - 4, grid - 4);
 
-
 // create a mapping of object types
 const types = {
   outline: '⛩',
   wall: '▉',
   softWall: 1,
-  bomb: 2
+  bomb: 2,
 };
 
 // keep track of all entities
@@ -72,19 +73,19 @@ let entities = [];
 // 'x' represents a cell that cannot have a soft wall (player start zone)
 let cells = [];
 const template = [
-  ['⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩'],
-  ['⛩','x','x',   ,   ,   ,   ,   ,   ,   ,   ,   ,'x','x','⛩'],
-  ['⛩','x','▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉','x','⛩'],
-  ['⛩','x',   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,'x','⛩'],
-  ['⛩',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'⛩'],
-  ['⛩',   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,'⛩'],
-  ['⛩',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'⛩'],
-  ['⛩',   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,'⛩'],
-  ['⛩',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'⛩'],
-  ['⛩','x',   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,'x','⛩'],
-  ['⛩','x','▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉',   ,'▉','x','⛩'],
-  ['⛩','x','x',   ,   ,   ,   ,   ,   ,   ,   ,   ,'x','x','⛩'],
-  ['⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩','⛩']
+  ['⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩'],
+  ['⛩', 'x', 'x', , , , , , , , , , 'x', 'x', '⛩'],
+  ['⛩', 'x', '▉', , '▉', , '▉', , '▉', , '▉', , '▉', 'x', '⛩'],
+  ['⛩', 'x', , , , , , , , , , , , 'x', '⛩'],
+  ['⛩', , '▉', , '▉', , '▉', , '▉', , '▉', , '▉', , '⛩'],
+  ['⛩', , , , , , , , , , , , , , '⛩'],
+  ['⛩', , '▉', , '▉', , '▉', , '▉', , '▉', , '▉', , '⛩'],
+  ['⛩', , , , , , , , , , , , , , '⛩'],
+  ['⛩', , '▉', , '▉', , '▉', , '▉', , '▉', , '▉', , '⛩'],
+  ['⛩', 'x', , , , , , , , , , , , 'x', '⛩'],
+  ['⛩', 'x', '▉', , '▉', , '▉', , '▉', , '▉', , '▉', 'x', '⛩'],
+  ['⛩', 'x', 'x', , , , , , , , , , 'x', 'x', '⛩'],
+  ['⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩', '⛩'],
 ];
 
 // populate the level with walls and soft walls
@@ -102,21 +103,20 @@ function generateLevel() {
   while (softWalls < numSoftWalls) {
     for (let row = 0; row < numRows; row++) {
       for (let col = 0; col < numCols; col++) {
-
         // don't place anything if there is already something there
         // iteration is used to not replace anything that was place on the first run
-        if (iteration > 0 && cells[row][col] !== undefined)
-          continue;
-        
+        if (iteration > 0 && cells[row][col] !== undefined) continue;
 
-        if (!template[row][col] && Math.random() < 0.30 && softWalls < numSoftWalls) {
+        if (
+          !template[row][col] &&
+          Math.random() < 0.3 &&
+          softWalls < numSoftWalls
+        ) {
           cells[row][col] = types.softWall;
           softWalls++;
-        }
-        else if (template[row][col] === types.wall) {
+        } else if (template[row][col] === types.wall) {
           cells[row][col] = types.wall;
-        }
-        else if (template[row][col] === types.outline) {
+        } else if (template[row][col] === types.outline) {
           cells[row][col] = types.outline;
         }
       }
@@ -127,7 +127,6 @@ function generateLevel() {
 
 // blow up a bomb and its surrounding tiles
 function blowUpBomb(bomb) {
-
   // bomb has already exploded so don't blow up again
   if (!bomb.alive) return;
 
@@ -137,23 +136,28 @@ function blowUpBomb(bomb) {
   cells[bomb.row][bomb.col] = null;
 
   // explode bomb outward by size
-  const dirs = [{
-    // up
-    row: -1,
-    col: 0
-  }, {
-    // down
-    row: 1,
-    col: 0
-  }, {
-    // left
-    row: 0,
-    col: -1
-  }, {
-    // right
-    row: 0,
-    col: 1
-  }];
+  const dirs = [
+    {
+      // up
+      row: -1,
+      col: 0,
+    },
+    {
+      // down
+      row: 1,
+      col: 0,
+    },
+    {
+      // left
+      row: 0,
+      col: -1,
+    },
+    {
+      // right
+      row: 0,
+      col: 1,
+    },
+  ];
   dirs.forEach((dir) => {
     for (let i = 0; i < bomb.size; i++) {
       const row = bomb.row + dir.row * i;
@@ -161,8 +165,7 @@ function blowUpBomb(bomb) {
       const cell = cells[row][col];
 
       // stop the explosion if it hit a wall
-      if (cell === types.wall || cell === types.outline)
-        return;
+      if (cell === types.wall || cell === types.outline) return;
 
       // center of the explosion is the first iteration of the loop
       entities.push(new Explosion(row, col, dir, i === 0 ? true : false));
@@ -170,17 +173,17 @@ function blowUpBomb(bomb) {
 
       // bomb hit another bomb so blow that one up too
       if (cell === types.bomb) {
-
         // find the bomb that was hit by comparing positions
         const nextBomb = entities.find((entity) => {
           return (
             entity.type === types.bomb &&
-            entity.row === row && entity.col === col
+            entity.row === row &&
+            entity.col === col
           );
         });
         blowUpBomb(nextBomb);
       }
-      
+
       // bomb hit a player so kill the player and end the explosion
       if (col === player.col && row === player.row) {
         player.alive = false;
@@ -230,8 +233,7 @@ class Bomb {
       const interval = Math.ceil(this.timer / 500);
       if (interval % 2 === 0) {
         this.radius = grid * 0.4;
-      }
-      else {
+      } else {
         this.radius = grid * 0.5;
       }
     };
@@ -248,14 +250,16 @@ class Bomb {
       context.fill();
 
       // draw bomb fuse moving up and down with the bomb size
-      const fuseY = (this.radius === grid * 0.5 ? grid * 0.15 : 0);
+      const fuseY = this.radius === grid * 0.5 ? grid * 0.15 : 0;
       context.strokeStyle = 'white';
       context.lineWidth = 5;
       context.beginPath();
       context.arc(
         (this.col + 0.75) * grid,
         (this.row + 0.25) * grid - fuseY,
-        10, Math.PI, -Math.PI / 2
+        10,
+        Math.PI,
+        -Math.PI / 2
       );
       context.stroke();
     };
@@ -295,8 +299,6 @@ class Explosion {
       context.fillRect(x, y, grid, grid);
 
       context.fillStyle = '#F39642'; // orange
-
-
 
       // determine how to draw based on if it's vertical or horizontal
       // center draws both ways
@@ -342,8 +344,8 @@ const player = {
     const x = this.col * grid;
     const y = this.row * grid;
     context.clearRect(x, y, grid, grid);
-  }
-}
+  },
+};
 
 // game loop
 let last;
@@ -351,8 +353,8 @@ let dt;
 let dateTimePK;
 let pk = false;
 let gameWin = false;
-function loop(timestamp) {
-  if(gameWin) {
+async function loop(timestamp) {
+  if (gameWin) {
     console.log('Game Win !');
     return;
   }
@@ -368,7 +370,7 @@ function loop(timestamp) {
   }
 
   requestAnimationFrame(loop);
-  context.clearRect(0,0,canvas.width,canvas.height);
+  context.clearRect(0, 0, canvas.width, canvas.height);
 
   // calculate the time difference since the last update. requestAnimationFrame
   // passes the current timestamp as a parameter to the loop
@@ -383,7 +385,7 @@ function loop(timestamp) {
   // update and render everything in the grid
   for (let row = 0; row < numRows; row++) {
     for (let col = 0; col < numCols; col++) {
-      switch(cells[row][col]) {
+      switch (cells[row][col]) {
         case types.wall:
           context.drawImage(wallCanvas, col * grid, row * grid);
           break;
@@ -401,6 +403,7 @@ function loop(timestamp) {
   if (currentSoftWalls === 0) {
     gameWin = true;
   }
+
   // update and render all entities
   entities.forEach((entity) => {
     entity.update(dt);
@@ -411,47 +414,78 @@ function loop(timestamp) {
   entities = entities.filter((entity) => entity.alive);
 
   player.render();
+
+  // Collect experiences for the model
+  if (state) {
+    const reward = player.alive ? 1 : -10;
+    nextState = getState();
+    const done = !player.alive || gameWin;
+    remember(state, action, reward, nextState, done);
+    await trainModel();
+    state.dispose();
+    nextState.dispose();
+    if (done) {
+      player.alive = true;
+      generateLevel();
+      gameWin = false;
+    }
+  }
+
+  state = getState();
+  const action = selectAction(state);
+  performAction(action);
 }
 
-// listen to keyboard events to move the snake
-document.addEventListener('keydown', function(e) {
+// Perform the action chosen by the model
+function performAction(action) {
   let row = player.row;
   let col = player.col;
 
-  // left arrow key
-  if (e.which === 37) {
-    col--;
-  }
-  // up arrow key
-  else if (e.which === 38) {
-    row--;
-  }
-  // right arrow key
-  else if (e.which === 39) {
-    col++;
-  }
-  // down arrow key
-  else if (e.which === 40) {
-    row++;
-  }
-  // space key (bomb)
-  else if (
-    e.which === 32 && !cells[row][col] &&
-    // count the number of bombs the player has placed
-    entities.filter((entity) => {
-      return entity.type === types.bomb && entity.owner === player
-    }).length < player.numBombs
-  ) {
-    // place bomb
-    const bomb = new Bomb(row, col, player.bombSize, player);
-    entities.push(bomb);
-    cells[row][col] = types.bomb;
+  switch (action) {
+    case 0:
+      col--;
+      break;
+    case 1:
+      row--;
+      break;
+    case 2:
+      col++;
+      break;
+    case 3:
+      row++;
+      break;
+    case 4: // Place bomb
+      if (
+        !cells[row][col] &&
+        entities.filter(
+          (entity) => entity.type === types.bomb && entity.owner === player
+        ).length < player.numBombs
+      ) {
+        const bomb = new Bomb(row, col, player.bombSize, player);
+        entities.push(bomb);
+        cells[row][col] = types.bomb;
+      }
+      break;
   }
 
-  // don't move the player if something is already at that position
   if (!cells[row][col]) {
     player.row = row;
     player.col = col;
+  }
+}
+
+document.addEventListener('keydown', function (e) {
+  const actionMap = {
+    37: 0, // left arrow key
+    38: 1, // up arrow key
+    39: 2, // right arrow key
+    40: 3, // down arrow key
+    32: 4, // space key
+  };
+
+  if (actionMap[e.which] !== undefined) {
+    const action = actionMap[e.which];
+    performAction(action);
   }
 });
 
