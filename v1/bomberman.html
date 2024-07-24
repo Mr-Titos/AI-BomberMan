@@ -12,16 +12,29 @@
   body {
     background: black;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    position: relative; /* Add this line */
   }
 
   canvas {
     background: rgb(61, 61, 61);
+    margin-bottom: 10px;
+  }
+
+  #score {
+    color: white;
+    align-items: flex-start; /* Update this line */
+    font-size: 24px;
+    position: absolute; /* Add this line */
+    top: 0; /* Add this line */
+    left: 10; /* Add this line */
   }
   </style>
 </head>
 <body>
+<div id="score">Score : 0</div>
 <canvas width="960" height="832" id="game"></canvas>
 <script src="script.js"></script>
 </body>

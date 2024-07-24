@@ -5,7 +5,12 @@ const numRows = 13;
 const numCols = 15;
 const numSoftWalls = 60;
 
-// SodtWall characteristics
+// Game Characteristics
+let score = 0;
+const dateStart = new Date();
+let dateEnd = new Date().setMinutes(dateStart.getMinutes() + 1);
+
+// SoftWall characteristics
 const softWallCanvas = document.createElement('canvas');
 const softWallCtx = softWallCanvas.getContext('2d');
 softWallCanvas.width = softWallCanvas.height = grid;
@@ -185,6 +190,11 @@ function blowUpBomb(bomb) {
 
       // stop the explosion if hit anything
       if (cell) {
+        if (cell === types.softWall) {
+          score++;
+          const scoreDiv = document.getElementById('score');
+          scoreDiv.textContent = 'Score : ' + score;
+        }
         return;
       }
     }
@@ -340,14 +350,19 @@ let last;
 let dt;
 let dateTimePK;
 let pk = false;
+let gameWin = false;
 function loop(timestamp) {
+  if(gameWin) {
+    console.log('Game Win !');
+    return;
+  }
   // End the game if the player is dead
   if (!player.alive) {
     dateTimePK = pk ? dateTimePK : timestamp;
     pk = true;
     if (timestamp - dateTimePK > 350) {
       player.clear();
-      console.log('Game Over');
+      console.log('Game Over !');
       return;
     }
   }
@@ -364,6 +379,7 @@ function loop(timestamp) {
   dt = timestamp - last;
   last = timestamp;
 
+  let currentSoftWalls = 0;
   // update and render everything in the grid
   for (let row = 0; row < numRows; row++) {
     for (let col = 0; col < numCols; col++) {
@@ -372,6 +388,7 @@ function loop(timestamp) {
           context.drawImage(wallCanvas, col * grid, row * grid);
           break;
         case types.softWall:
+          currentSoftWalls++;
           context.drawImage(softWallCanvas, col * grid, row * grid);
           break;
         case types.outline:
@@ -381,6 +398,9 @@ function loop(timestamp) {
     }
   }
 
+  if (currentSoftWalls === 0) {
+    gameWin = true;
+  }
   // update and render all entities
   entities.forEach((entity) => {
     entity.update(dt);
