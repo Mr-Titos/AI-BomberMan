@@ -353,7 +353,13 @@ let dt;
 let dateTimePK;
 let pk = false;
 let gameWin = false;
+let state;
+let action;
+let iteration = 0;
 async function loop(timestamp) {
+  console.log(iteration)
+  iteration++;
+
   if (gameWin) {
     console.log('Game Win !');
     return;
@@ -418,21 +424,27 @@ async function loop(timestamp) {
   // Collect experiences for the model
   if (state) {
     const reward = player.alive ? 1 : -10;
-    nextState = getState();
+    const nextState = getState(cells, numRows, numCols);
     const done = !player.alive || gameWin;
+    console.log('State:', state, 'Action:', action, 'Reward:', reward, 'Done:', done);
     remember(state, action, reward, nextState, done);
     await trainModel();
     state.dispose();
     nextState.dispose();
     if (done) {
+      score = 0;
       player.alive = true;
-      generateLevel();
       gameWin = false;
+      generateLevel();
     }
   }
 
-  state = getState();
-  const action = selectAction(state);
+  state = getState(cells, numRows, numCols);
+  if (state == null) {
+    console.error('Failed to retrieve valid state');
+    return;
+  }
+  action = selectAction(state);
   performAction(action);
 }
 
@@ -466,6 +478,9 @@ function performAction(action) {
         cells[row][col] = types.bomb;
       }
       break;
+      default:
+        console.error('Invalid action:', action);
+        break;
   }
 
   if (!cells[row][col]) {
@@ -490,5 +505,8 @@ document.addEventListener('keydown', function (e) {
 });
 
 // start the game
-generateLevel();
+setTimeout(() => {
+  generateLevel();
 requestAnimationFrame(loop);
+}, 2000);
+

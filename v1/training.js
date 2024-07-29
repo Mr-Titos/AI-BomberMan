@@ -1,15 +1,11 @@
 import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
+
 
 const numActions = 5; // up, down, left, right, place bomb
 const stateSize = 13 * 15; // Adjust this based on your actual state size (numRows * numCols)
 
 const model = tf.sequential();
-model.add(
-  tf.layers.dense({ units: 24, inputShape: [stateSize], activation: 'relu' })
-);
-model.add(tf.layers.dense({ units: 24, activation: 'relu' }));
-model.add(tf.layers.dense({ units: numActions, activation: 'linear' }));
-model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
 
 let replayMemory = [];
 const memorySize = 2000;
@@ -19,6 +15,16 @@ let epsilon = 1.0;
 const epsilonMin = 0.01;
 const epsilonDecay = 0.995;
 
+async function setup() {
+  await tf.setBackend('webgl');
+
+  model.add(tf.layers.dense({ units: 24, inputShape: [stateSize], activation: 'relu' }));
+  model.add(tf.layers.dense({ units: 24, activation: 'relu' }));
+  model.add(tf.layers.dense({ units: numActions, activation: 'linear' }));
+  model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+
+}
+
 export function getState(cells, numRows, numCols) {
   let state = [];
   for (let row = 0; row < numRows; row++) {
@@ -26,6 +32,13 @@ export function getState(cells, numRows, numCols) {
       state.push(cells[row][col] ? 1 : 0); // Simple binary state representation
     }
   }
+
+  // Ensure the state array has the correct length
+  if (state.length !== stateSize) {
+    console.error(`State size mismatch: expected ${stateSize}, but got ${state.length}`);
+    return null;
+  }
+
   return tf.tensor2d([state]);
 }
 
@@ -41,14 +54,20 @@ export function selectAction(state) {
     return Math.floor(Math.random() * numActions);
   } else {
     return tf.tidy(() => {
+      if (state == null) {
+        console.error('Invalid state tensor passed to selectAction.');
+        return Math.floor(Math.random() * numActions);
+      }
       const qValues = model.predict(state);
       return qValues.argMax(-1).dataSync()[0];
     });
   }
 }
 
+
 export async function trainModel() {
-  if (replayMemory.length < batchSize) return;
+  if (replayMemory.length < batchSize) 
+    return;
 
   const batch = [];
   for (let i = 0; i < batchSize; i++) {
@@ -59,22 +78,28 @@ export async function trainModel() {
   const states = [];
   const targets = [];
 
-  batch.forEach(({ state, action, reward, nextState, done }) => {
-    let targetB = reward;
-    if (!done) {
-      const qNext = model.predict(nextState).max(-1).dataSync()[0];
+  batch.forEach(memory => {
+    let targetB = memory.reward;
+    
+    if (!memory.done) {
+      const qNextTensor = model.predict(memory.nextState);
+      const qNext = qNextTensor.max(-1).dataSync()[0];
       targetB += gamma * qNext;
+      qNextTensor.dispose();
     }
 
-    const targetF = model.predict(state).dataSync();
-    targetF[action] = targetB;
+    const targetFTensor = model.predict(memory.state);
+    const targetF = targetFTensor.dataSync();
+    targetFTensor.dispose();
 
-    states.push(state.dataSync());
+    targetF[memory.action] = targetB;
+
+    states.push(memory.state.dataSync());
     targets.push(targetF);
   });
 
-  const x = tf.tensor2d(states);
-  const y = tf.tensor2d(targets);
+  const x = tf.tensor2d(states, [states.length, stateSize]);
+  const y = tf.tensor2d(targets, [targets.length, numActions]);
 
   await model.fit(x, y, { epochs: 1 });
   tf.dispose([x, y]);
@@ -83,3 +108,5 @@ export async function trainModel() {
     epsilon *= epsilonDecay;
   }
 }
+
+setup();
